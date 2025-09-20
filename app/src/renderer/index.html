@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gmail Calendar Assistant</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <!-- Welcome Screen -->
+    <div id="welcomeScreen" class="screen active">
+      <div class="welcome-container">
+        <div class="welcome-header">
+          <img src="../assets/logo-placeholder.svg" alt="Logo" class="logo" />
+          <h1 class="welcome-title">Greetings User</h1>
+          <p class="welcome-subtitle">
+            Your AI-powered Gmail and Calendar Assistant
+          </p>
+        </div>
+
+        <div class="welcome-actions">
+          <button id="getStartedBtn" class="btn-primary">
+            <span class="btn-icon">🚀</span>
+            Getting Started
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Dashboard -->
+    <div id="dashboardScreen" class="screen">
+      <div class="dashboard-container">
+        <header class="app-header">
+          <div class="header-left">
+            <img
+              src="../assets/logo-placeholder.svg"
+              alt="Logo"
+              class="header-logo"
+            />
+            <h1>Gmail Calendar Assistant</h1>
+          </div>
+          <div class="header-right">
+            <button id="configBtn" class="btn-secondary">⚙️ Settings</button>
+          </div>
+        </header>
+
+        <main class="dashboard-main">
+          <div class="apps-section">
+            <h2>Your AI-Powered Apps</h2>
+            <div class="apps-grid">
+              <!-- Gmail Summary App -->
+              <div class="app-card" id="emailSummaryApp">
+                <div class="app-icon">
+                  <img src="../assets/email-logo-placeholder.svg" alt="Email" />
+                </div>
+                <div class="app-content">
+                  <h3>Email Summary</h3>
+                  <p>AI-powered summary of your last 24 hours emails</p>
+                  <div class="app-stats">
+                    <span class="stat-badge" id="emailCount">Loading...</span>
+                  </div>
+                </div>
+                <button class="app-button">Launch App</button>
+              </div>
+
+              <!-- Calendar Analysis App -->
+              <div class="app-card" id="calendarAnalysisApp">
+                <div class="app-icon">
+                  <img
+                    src="../assets/calendar-logo-placeholder.svg"
+                    alt="Calendar"
+                  />
+                </div>
+                <div class="app-content">
+                  <h3>Calendar Analysis</h3>
+                  <p>Smart insights for your upcoming events with web search</p>
+                  <div class="app-stats">
+                    <span class="stat-badge" id="eventCount">Loading...</span>
+                  </div>
+                </div>
+                <button class="app-button">Launch App</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="status-section">
+            <div class="status-card">
+              <h3>System Status</h3>
+              <div class="status-items">
+                <div class="status-item" id="groqStatus">
+                  <span class="status-dot"></span>
+                  <span>Groq AI</span>
+                  <span class="status-text">Checking...</span>
+                </div>
+                <div class="status-item" id="gmailStatus">
+                  <span class="status-dot"></span>
+                  <span>Gmail API</span>
+                  <span class="status-text">Checking...</span>
+                </div>
+                <div class="status-item" id="calendarStatus">
+                  <span class="status-dot"></span>
+                  <span>Calendar API</span>
+                  <span class="status-text">Checking...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Email Summary Screen -->
+    <div id="emailScreen" class="screen">
+      <div class="app-container">
+        <header class="app-header">
+          <button id="backFromEmailBtn" class="btn-back">← Back</button>
+          <h1>📧 Email Summary</h1>
+          <button id="refreshEmailBtn" class="btn-secondary">🔄 Refresh</button>
+        </header>
+
+        <main class="app-main">
+          <div class="loading-section" id="emailLoading">
+            <div class="spinner"></div>
+            <p>Analyzing your emails with AI...</p>
+          </div>
+
+          <div class="summary-section" id="emailSummary" style="display: none">
+            <div class="summary-card">
+              <h3>AI Summary</h3>
+              <div class="summary-content" id="emailSummaryContent">
+                <!-- AI summary will be inserted here -->
+              </div>
+            </div>
+
+            <div class="details-section">
+              <h3>Email Details</h3>
+              <div class="email-list" id="emailList">
+                <!-- Email list will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <div class="error-section" id="emailError" style="display: none">
+            <div class="error-card">
+              <h3>⚠️ Error</h3>
+              <p id="emailErrorMessage"></p>
+              <button id="retryEmailBtn" class="btn-primary">Retry</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Calendar Analysis Screen -->
+    <div id="calendarScreen" class="screen">
+      <div class="app-container">
+        <header class="app-header">
+          <button id="backFromCalendarBtn" class="btn-back">← Back</button>
+          <h1>📅 Calendar Analysis</h1>
+          <button id="refreshCalendarBtn" class="btn-secondary">
+            🔄 Refresh
+          </button>
+        </header>
+
+        <main class="app-main">
+          <div class="loading-section" id="calendarLoading">
+            <div class="spinner"></div>
+            <p>Analyzing your calendar with AI...</p>
+          </div>
+
+          <div
+            class="analysis-section"
+            id="calendarAnalysis"
+            style="display: none"
+          >
+            <div class="analysis-card">
+              <h3>AI Analysis & Insights</h3>
+              <div class="analysis-content" id="calendarAnalysisContent">
+                <!-- AI analysis will be inserted here -->
+              </div>
+            </div>
+
+            <div class="events-section">
+              <h3>Upcoming Events</h3>
+              <div class="events-list" id="eventsList">
+                <!-- Events list will be populated here -->
+              </div>
+            </div>
+          </div>
+
+          <div class="error-section" id="calendarError" style="display: none">
+            <div class="error-card">
+              <h3>⚠️ Error</h3>
+              <p id="calendarErrorMessage"></p>
+              <button id="retryCalendarBtn" class="btn-primary">Retry</button>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Configuration Modal -->
+    <div id="configModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Configuration</h2>
+          <button id="closeConfigBtn" class="btn-close">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="config-section">
+            <h3>Google API Setup</h3>
+            <p>
+              To use Gmail and Calendar features, you need to configure Google
+              API credentials.
+            </p>
+
+            <div class="config-item">
+              <label>Google API Credentials</label>
+              <button id="selectCredentialsBtn" class="btn-secondary">
+                Select credentials.json
+              </button>
+              <div class="config-status" id="credentialsStatus">
+                Not configured
+              </div>
+            </div>
+
+            <div class="config-item">
+              <label>Groq API</label>
+              <div class="config-status" id="groqApiStatus">Loading...</div>
+            </div>
+          </div>
+
+          <div class="config-instructions">
+            <h4>Setup Instructions:</h4>
+            <ol>
+              <li>
+                Go to
+                <a
+                  href="#"
+                  onclick="window.open('https://console.cloud.google.com')"
+                  >Google Cloud Console</a
+                >
+              </li>
+              <li>Create a new project or select existing one</li>
+              <li>Enable Gmail API and Calendar API</li>
+              <li>Create OAuth 2.0 credentials</li>
+              <li>Download the credentials.json file</li>
+              <li>Select the file using the button above</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

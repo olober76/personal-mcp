@@ -1,0 +1,48 @@
+{
+  "name": "gmail-calendar-assistant",
+  "version": "1.0.0",
+  "description": "AI Assistant for Gmail and Google Calendar with MCP and Groq",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --inspect",
+    "setup-auth": "python src/auth_setup.py",
+    "setup-python": "pip install -r requirements.txt",
+    "test-mcp": "python src/mcp-server/google_services_server.py",
+    "build": "electron-builder",
+    "dist": "electron-builder --publish=never",
+    "clean": "rimraf dist node_modules",
+    "install-clean": "npm run clean && npm install"
+  },
+  "keywords": [
+    "electron",
+    "mcp",
+    "groq",
+    "gmail",
+    "calendar",
+    "ai-assistant"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "electron": "^26.0.0",
+    "dotenv": "^16.3.1"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.0.0"
+  },
+  "build": {
+    "appId": "com.gmailcalendar.assistant",
+    "productName": "Gmail Calendar Assistant",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}
