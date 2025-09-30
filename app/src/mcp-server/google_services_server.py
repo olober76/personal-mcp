@@ -113,7 +113,7 @@ def extract_email_body(payload: Dict) -> str:
 
 
 @mcp.tool
-async def get_recent_emails(max_results: int = 50) -> Dict[str, Any]:
+async def get_recent_emails(maxResults: int = 50) -> Dict[str, Any]:
     """Get Gmail emails from the last 24 hours"""
     global gmail_service
     
@@ -133,7 +133,7 @@ async def get_recent_emails(max_results: int = 50) -> Dict[str, Any]:
         results = gmail_service.users().messages().list(
             userId='me',
             q=query,
-            maxResults=max_results
+            maxResults=maxResults
         ).execute()
         
         messages = results.get('messages', [])

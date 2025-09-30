@@ -44,44 +44,164 @@ function createWindow() {
 
 function startMCPServer() {
   try {
-    mcpProcess = spawn(
-      "python",
-      [path.join(__dirname, "mcp-server", "google_services_server.py")],
-      {
-        stdio: ["pipe", "pipe", "pipe"],
-        env: { ...process.env },
-      }
-    );
+    // Switch between servers as needed:
+    // const serverPath = path.join(__dirname, "mcp-server", "echo_test_server.py"); // Test server
+    const serverPath = path.join(
+      __dirname,
+      "mcp-server",
+      "google_services_server.py"
+    ); // Production server
+
+    mcpProcess = spawn("python", [serverPath], {
+      stdio: ["pipe", "pipe", "pipe"],
+      env: { ...process.env },
+    });
+
+    let serverReady = false;
 
     mcpProcess.stdout.on("data", (data) => {
-      console.log("MCP Server:", data.toString());
+      const output = data.toString();
+      console.log("MCP Server:", output);
     });
 
     mcpProcess.stderr.on("data", (data) => {
-      console.error("MCP Server Error:", data.toString());
+      const output = data.toString();
+      console.error("MCP Server Error:", output);
+
+      // Check if server is ready - FastMCP outputs to stderr
+      if (
+        (output.includes("FastMCP") ||
+          output.includes("Starting MCP server")) &&
+        (output.includes("Server name") ||
+          output.includes("Echo Test Server") ||
+          output.includes("Simple Test Server"))
+      ) {
+        setTimeout(async () => {
+          await initializeMCPServer();
+          serverReady = true;
+          console.log("✅ MCP Server is ready for requests");
+        }, 2000); // Wait 2 seconds after seeing the banner
+      }
     });
 
     mcpProcess.on("error", (error) => {
       console.error("Failed to start Python MCP server:", error);
     });
 
+    mcpProcess.on("close", (code) => {
+      console.log(`MCP Server process exited with code ${code}`);
+      mcpProcess = null;
+    });
+
     console.log("Python MCP Server started with PID:", mcpProcess.pid);
+
+    // Store server ready status
+    mcpProcess.isReady = () => serverReady;
   } catch (error) {
     console.error("Error starting MCP server:", error);
   }
 }
 
-// MCP Communication Helper
-async function callMCPTool(toolName, params = {}) {
+// Initialize MCP Server with proper protocol
+async function initializeMCPServer() {
   return new Promise((resolve, reject) => {
     if (!mcpProcess) {
       reject(new Error("MCP server not running"));
       return;
     }
 
+    const initRequest = {
+      jsonrpc: "2.0",
+      id: 0,
+      method: "initialize",
+      params: {
+        protocolVersion: "2024-11-05",
+        capabilities: {
+          tools: {},
+        },
+        clientInfo: {
+          name: "gmail-calendar-assistant",
+          version: "1.0.0",
+        },
+      },
+    };
+
+    let responseData = "";
+    const timeout = setTimeout(() => {
+      reject(new Error("MCP initialization timeout"));
+    }, 10000);
+
+    const dataHandler = (data) => {
+      responseData += data.toString();
+
+      try {
+        const lines = responseData.split("\n");
+        for (let line of lines) {
+          line = line.trim();
+          if (!line) continue;
+
+          const response = JSON.parse(line);
+          if (response.id === 0) {
+            clearTimeout(timeout);
+            mcpProcess.stdout.removeListener("data", dataHandler);
+
+            // Send initialized notification
+            const initNotification = {
+              jsonrpc: "2.0",
+              method: "notifications/initialized",
+            };
+
+            mcpProcess.stdin.write(JSON.stringify(initNotification) + "\n");
+            console.log("✅ MCP Server initialized successfully");
+            resolve();
+            return;
+          }
+        }
+      } catch (e) {
+        // Continue accumulating data
+      }
+    };
+
+    mcpProcess.stdout.on("data", dataHandler);
+    mcpProcess.stdin.write(JSON.stringify(initRequest) + "\n");
+  });
+}
+
+// MCP Communication Helper
+async function callMCPTool(toolName, params = {}) {
+  return new Promise(async (resolve, reject) => {
+    if (!mcpProcess) {
+      reject(new Error("MCP server not running"));
+      return;
+    }
+
+    // Wait for server to be ready
+    let attempts = 0;
+    const maxAttempts = 15; // 7.5 seconds max
+    while (!mcpProcess.isReady() && attempts < maxAttempts) {
+      await new Promise((r) => setTimeout(r, 500));
+      attempts++;
+      if (attempts % 5 === 0) {
+        console.log(`Waiting for MCP server... (${attempts}/${maxAttempts})`);
+      }
+    }
+
+    if (!mcpProcess.isReady()) {
+      console.error(
+        "MCP server still not ready after waiting. Server status:",
+        !!mcpProcess
+      );
+      reject(
+        new Error("MCP server not ready - timeout waiting for initialization")
+      );
+      return;
+    }
+
+    console.log(`🚀 MCP server ready! Making ${toolName} call...`);
+
     const request = {
       jsonrpc: "2.0",
-      id: Date.now(),
+      id: Date.now() + Math.floor(Math.random() * 1000),
       method: "tools/call",
       params: {
         name: toolName,
@@ -90,33 +210,59 @@ async function callMCPTool(toolName, params = {}) {
     };
 
     let responseData = "";
+    let isComplete = false;
 
     const timeout = setTimeout(() => {
-      reject(new Error("MCP call timeout"));
-    }, 30000);
+      if (!isComplete) {
+        isComplete = true;
+        mcpProcess.stdout.removeListener("data", dataHandler);
+        reject(new Error("MCP call timeout"));
+      }
+    }, 45000); // Increase timeout
 
     const dataHandler = (data) => {
+      if (isComplete) return;
+
       responseData += data.toString();
 
-      try {
-        const response = JSON.parse(responseData);
-        clearTimeout(timeout);
-        mcpProcess.stdout.removeListener("data", dataHandler);
+      // Try to parse each line as JSON (FastMCP sends line-delimited JSON)
+      const lines = responseData.split("\n");
 
-        if (response.error) {
-          reject(new Error(response.error.message));
-        } else {
-          const content = response.result?.content?.[0]?.text;
-          if (content) {
-            const parsedContent = JSON.parse(content);
-            resolve(parsedContent);
-          } else {
-            resolve(response.result);
+      for (let i = 0; i < lines.length - 1; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        try {
+          const response = JSON.parse(line);
+
+          // Check if this is our response
+          if (response.id === request.id) {
+            isComplete = true;
+            clearTimeout(timeout);
+            mcpProcess.stdout.removeListener("data", dataHandler);
+
+            if (response.error) {
+              reject(
+                new Error(
+                  response.error.message ||
+                    response.error.data ||
+                    "Unknown MCP error"
+                )
+              );
+            } else {
+              // FastMCP v2 returns result directly
+              resolve(response.result);
+            }
+            return;
           }
+        } catch (parseError) {
+          // Continue to next line
+          continue;
         }
-      } catch (parseError) {
-        // Continue accumulating data
       }
+
+      // Keep the last incomplete line
+      responseData = lines[lines.length - 1];
     };
 
     mcpProcess.stdout.on("data", dataHandler);
@@ -128,6 +274,10 @@ async function callMCPTool(toolName, params = {}) {
 ipcMain.handle("get-recent-emails", async (event, maxResults = 50) => {
   try {
     const result = await callMCPTool("get_recent_emails", { maxResults });
+    // Extract structuredContent from MCP response
+    if (result && result.structuredContent) {
+      return result.structuredContent;
+    }
     return result;
   } catch (error) {
     console.error("Error getting recent emails:", error);
@@ -141,6 +291,10 @@ ipcMain.handle("get-recent-emails", async (event, maxResults = 50) => {
 ipcMain.handle("get-upcoming-events", async (event, days = 7) => {
   try {
     const result = await callMCPTool("get_upcoming_events", { days });
+    // Extract structuredContent from MCP response
+    if (result && result.structuredContent) {
+      return result.structuredContent;
+    }
     return result;
   } catch (error) {
     console.error("Error getting upcoming events:", error);
@@ -154,6 +308,10 @@ ipcMain.handle("get-upcoming-events", async (event, days = 7) => {
 ipcMain.handle("search-web-insights", async (event, query, context = "") => {
   try {
     const result = await callMCPTool("search_web_insights", { query, context });
+    // Extract structuredContent from MCP response
+    if (result && result.structuredContent) {
+      return result.structuredContent;
+    }
     return result;
   } catch (error) {
     console.error("Error searching web insights:", error);
@@ -175,6 +333,10 @@ ipcMain.handle("summarize-emails", async (event, emails) => {
     }
 
     const result = await callMCPTool("summarize_emails_ai", { emails });
+    // Extract structuredContent from MCP response
+    if (result && result.structuredContent) {
+      return result.structuredContent;
+    }
     return result;
   } catch (error) {
     console.error("Error summarizing emails:", error);
@@ -195,6 +357,10 @@ ipcMain.handle("analyze-calendar", async (event, events) => {
     }
 
     const result = await callMCPTool("analyze_calendar_ai", { events });
+    // Extract structuredContent from MCP response
+    if (result && result.structuredContent) {
+      return result.structuredContent;
+    }
     return result;
   } catch (error) {
     console.error("Error analyzing calendar:", error);
