@@ -11,7 +11,7 @@ If you're getting "localhost refused to connect" error, you need to update your 
 1. Go to [Google Cloud Console](https://console.cloud.google.com)
 2. Select your project: **iron-cycle-416504**
 3. Go to **APIs & Services** > **Credentials**
-4. Find your OAuth 2.0 Client ID: `858272735729-ljk91r9shodrre3pbp0hc0h9n7r9a3dr.apps.googleusercontent.com`
+4. Find your OAuth 2.0 Client ID
 5. Click the **Edit** button (pencil icon)
 6. In **Authorized redirect URIs** section, add:
    ```
