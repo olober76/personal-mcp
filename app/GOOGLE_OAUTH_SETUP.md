@@ -27,12 +27,12 @@ If you're getting "localhost refused to connect" error, you need to update your 
 ```json
 {
   "installed": {
-    "client_id": "858272735729-ljk91r9shodrre3pbp0hc0h9n7r9a3dr.apps.googleusercontent.com",
-    "project_id": "iron-cycle-416504",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_secret": "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",
+    "client_id": "",
+    "project_id": "",
+    "auth_uri": "",
+    "token_uri": "",
+    "auth_provider_x509_cert_url": "",
+    "client_secret": "",
     "redirect_uris": ["http://localhost:8080"]
   }
 }
